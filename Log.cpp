@@ -21,7 +21,7 @@
 #include <string>
 
 #define LOG_TAG "unwind"
-#include <log/log.h>
+#include <android-base/log_main.h>
 
 #include <android-base/stringprintf.h>
 

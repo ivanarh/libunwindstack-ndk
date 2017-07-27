@@ -20,7 +20,7 @@
 #include <string>
 
 #include <android-base/stringprintf.h>
-#include <log/log.h>
+#include <android-base/log_main.h>
 
 #include "LogFake.h"
 

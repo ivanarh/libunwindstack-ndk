@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-#include <elf.h>
+#include <linux/elf.h>
 #include <stdint.h>
 #include <sys/ptrace.h>
+#define PTRACE_GETREGSET 0x4204
 #include <sys/uio.h>
 
 #include <vector>

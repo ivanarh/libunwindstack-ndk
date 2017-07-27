@@ -17,7 +17,7 @@
 #ifndef _LIBUNWINDSTACK_ELF_INTERFACE_H
 #define _LIBUNWINDSTACK_ELF_INTERFACE_H
 
-#include <elf.h>
+#include <linux/elf.h>
 #include <stdint.h>
 
 #include <memory>

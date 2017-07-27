@@ -14,15 +14,21 @@ file(GLOB UNWINDSTACK_SOURCES
     ${UNWINDSTACK_ROOT}/DwarfSection.cpp
     ${UNWINDSTACK_ROOT}/Elf.cpp
     ${UNWINDSTACK_ROOT}/ElfInterface.cpp
-    ${UNWINDSTACK_ROOT}/ElfInterfaceArm.cpp
     ${UNWINDSTACK_ROOT}/Log.cpp
     ${UNWINDSTACK_ROOT}/MapInfo.cpp
     ${UNWINDSTACK_ROOT}/Maps.cpp
     ${UNWINDSTACK_ROOT}/Memory.cpp
     ${UNWINDSTACK_ROOT}/Regs.cpp
     ${UNWINDSTACK_ROOT}/Symbols.cpp
+    ${UNWINDSTACK_ROOT}/ElfInterfaceArm.cpp
     ${UNWINDSTACK_ROOT}/android-base/stringprintf.cpp
     ${UNWINDSTACK_ROOT}/getline.c
 )
+
+if(${CMAKE_SYSTEM_PROCESSOR} MATCHES arm)
+else()
+    add_definitions(-DEM_ARM=40)
+endif()
+
 add_library(unwindstack STATIC ${UNWINDSTACK_SOURCES})
 target_link_libraries(unwindstack lzma)

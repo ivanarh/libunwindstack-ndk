@@ -16,12 +16,15 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "unistdfix.h"
+#include "getline.h"
 
 #include <android-base/unique_fd.h>
 

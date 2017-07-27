@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <elf.h>
+#include <linux/elf.h>
 #include <stdint.h>
 
 #include <memory>

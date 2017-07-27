@@ -22,6 +22,8 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
+#include "unistdfix.h"
+#include <sys/syscall.h>
 
 #include <algorithm>
 #include <memory>
@@ -210,9 +212,18 @@ bool MemoryLocal::Read(uint64_t addr, void* dst, size_t size) {
   remote_io.iov_base = reinterpret_cast<void*>(static_cast<uintptr_t>(addr));
   remote_io.iov_len = size;
 
-  ssize_t bytes_read = process_vm_readv(getpid(), &local_io, 1, &remote_io, 1, 0);
+//  ssize_t bytes_read = process_vm_readv(getpid(), &local_io, 1, &remote_io, 1, 0);
+  ssize_t bytes_read =
+#ifdef __arm__
+            syscall(__NR_process_vm_readv, getpid(), &local_io, 1, &remote_io, 1, 0);
+#else
+            -1;
+#endif
   if (bytes_read == -1) {
-    return false;
+    // Falling back to direct memory reads for older Android versions
+    // Where this syscall isn't supported.
+    memcpy(dst, (void *)addr, size);
+    bytes_read = size;
   }
   return static_cast<size_t>(bytes_read) == size;
 }

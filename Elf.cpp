@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-#include <elf.h>
+#include <linux/elf.h>
 #include <string.h>
 
 #include <memory>
 #include <string>
 
 #define LOG_TAG "unwind"
-#include <log/log.h>
+#include <android-base/log_main.h>
+#include <linux/elf-em.h>
 
 #include <unwindstack/Elf.h>
 #include <unwindstack/ElfInterface.h>
