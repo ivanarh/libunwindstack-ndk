@@ -16,6 +16,7 @@
 
 #include <linux/elf.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include <memory>
 #include <string>
