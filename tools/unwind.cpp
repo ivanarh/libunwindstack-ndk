@@ -26,13 +26,13 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <string>
-
+#include <unwindstack/DexFiles.h>
 #include <unwindstack/Elf.h>
-#include <unwindstack/MapInfo.h>
+#include <unwindstack/JitDebug.h>
 #include <unwindstack/Maps.h>
 #include <unwindstack/Memory.h>
 #include <unwindstack/Regs.h>
+#include <unwindstack/Unwinder.h>
 
 static bool Attach(pid_t pid) {
   if (ptrace(PTRACE_ATTACH, pid, 0, 0) == -1) {
@@ -51,10 +51,6 @@ static bool Attach(pid_t pid) {
   return false;
 }
 
-static bool Detach(pid_t pid) {
-  return ptrace(PTRACE_DETACH, pid, 0, 0) == 0;
-}
-
 void DoUnwind(pid_t pid) {
   unwindstack::RemoteMaps remote_maps(pid);
   if (!remote_maps.Parse()) {
@@ -62,29 +58,31 @@ void DoUnwind(pid_t pid) {
     return;
   }
 
-  uint32_t machine_type;
-  unwindstack::Regs* regs = unwindstack::Regs::RemoteGet(pid, &machine_type);
+  unwindstack::Regs* regs = unwindstack::Regs::RemoteGet(pid);
   if (regs == nullptr) {
     printf("Unable to get remote reg data\n");
     return;
   }
 
-  bool bits32 = true;
   printf("ABI: ");
-  switch (machine_type) {
-    case EM_ARM:
+  switch (regs->Arch()) {
+    case unwindstack::ARCH_ARM:
       printf("arm");
       break;
-    case EM_386:
+    case unwindstack::ARCH_X86:
       printf("x86");
       break;
-    case EM_AARCH64:
+    case unwindstack::ARCH_ARM64:
       printf("arm64");
-      bits32 = false;
       break;
-    case EM_X86_64:
+    case unwindstack::ARCH_X86_64:
       printf("x86_64");
-      bits32 = false;
+      break;
+    case unwindstack::ARCH_MIPS:
+      printf("mips");
+      break;
+    case unwindstack::ARCH_MIPS64:
+      printf("mips64");
       break;
     default:
       printf("unknown\n");
@@ -92,53 +90,20 @@ void DoUnwind(pid_t pid) {
   }
   printf("\n");
 
-  unwindstack::MemoryRemote remote_memory(pid);
-  for (size_t frame_num = 0; frame_num < 64; frame_num++) {
-    if (regs->pc() == 0) {
-      break;
-    }
-    unwindstack::MapInfo* map_info = remote_maps.Find(regs->pc());
-    if (map_info == nullptr) {
-      printf("Failed to find map data for the pc\n");
-      break;
-    }
+  auto process_memory = unwindstack::Memory::CreateProcessMemory(pid);
+  unwindstack::Unwinder unwinder(128, &remote_maps, regs, process_memory);
 
-    unwindstack::Elf* elf = map_info->GetElf(pid, true);
+  unwindstack::JitDebug jit_debug(process_memory);
+  unwinder.SetJitDebug(&jit_debug, regs->Arch());
 
-    uint64_t rel_pc = elf->GetRelPc(regs->pc(), map_info);
-    uint64_t adjusted_rel_pc = rel_pc;
-    // Don't need to adjust the first frame pc.
-    if (frame_num != 0) {
-      adjusted_rel_pc = regs->GetAdjustedPc(rel_pc, elf);
-    }
+  unwindstack::DexFiles dex_files(process_memory);
+  unwinder.SetDexFiles(&dex_files, regs->Arch());
 
-    std::string name;
-    if (bits32) {
-      printf("  #%02zu pc %08" PRIx64, frame_num, adjusted_rel_pc);
-    } else {
-      printf("  #%02zu pc %016" PRIx64, frame_num, adjusted_rel_pc);
-    }
-    if (!map_info->name.empty()) {
-      printf("  %s", map_info->name.c_str());
-      if (map_info->elf_offset != 0) {
-        printf(" (offset 0x%" PRIx64 ")", map_info->elf_offset);
-      }
-    } else {
-      printf("  <anonymous:%" PRIx64 ">", map_info->offset);
-    }
-    uint64_t func_offset;
-    if (elf->GetFunctionName(adjusted_rel_pc, &name, &func_offset)) {
-      printf(" (%s", name.c_str());
-      if (func_offset != 0) {
-        printf("+%" PRId64, func_offset);
-      }
-      printf(")");
-    }
-    printf("\n");
+  unwinder.Unwind();
 
-    if (!elf->Step(rel_pc + map_info->elf_offset, regs, &remote_memory)) {
-      break;
-    }
+  // Print the frames.
+  for (size_t i = 0; i < unwinder.NumFrames(); i++) {
+    printf("%s\n", unwinder.FormatFrame(i).c_str());
   }
 }
 
@@ -156,7 +121,7 @@ int main(int argc, char** argv) {
 
   DoUnwind(pid);
 
-  Detach(pid);
+  ptrace(PTRACE_DETACH, pid, 0, 0);
 
   return 0;
 }

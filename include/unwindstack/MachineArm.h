@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2017 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,25 +14,37 @@
  * limitations under the License.
  */
 
-#ifndef _LIBUNWINDSTACK_DWARF_ERROR_H
-#define _LIBUNWINDSTACK_DWARF_ERROR_H
+#ifndef _LIBUNWINDSTACK_MACHINE_ARM_H
+#define _LIBUNWINDSTACK_MACHINE_ARM_H
 
 #include <stdint.h>
 
 namespace unwindstack {
 
-enum DwarfError : uint8_t {
-  DWARF_ERROR_NONE,
-  DWARF_ERROR_MEMORY_INVALID,
-  DWARF_ERROR_ILLEGAL_VALUE,
-  DWARF_ERROR_ILLEGAL_STATE,
-  DWARF_ERROR_STACK_INDEX_NOT_VALID,
-  DWARF_ERROR_NOT_IMPLEMENTED,
-  DWARF_ERROR_TOO_MANY_ITERATIONS,
-  DWARF_ERROR_CFA_NOT_DEFINED,
-  DWARF_ERROR_UNSUPPORTED_VERSION,
+enum ArmReg : uint16_t {
+  ARM_REG_R0 = 0,
+  ARM_REG_R1,
+  ARM_REG_R2,
+  ARM_REG_R3,
+  ARM_REG_R4,
+  ARM_REG_R5,
+  ARM_REG_R6,
+  ARM_REG_R7,
+  ARM_REG_R8,
+  ARM_REG_R9,
+  ARM_REG_R10,
+  ARM_REG_R11,
+  ARM_REG_R12,
+  ARM_REG_R13,
+  ARM_REG_R14,
+  ARM_REG_R15,
+  ARM_REG_LAST,
+
+  ARM_REG_SP = ARM_REG_R13,
+  ARM_REG_LR = ARM_REG_R14,
+  ARM_REG_PC = ARM_REG_R15,
 };
 
 }  // namespace unwindstack
 
-#endif  // _LIBUNWINDSTACK_DWARF_ERROR_H
+#endif  // _LIBUNWINDSTACK_MACHINE_ARM_H

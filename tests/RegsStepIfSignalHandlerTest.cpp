@@ -19,9 +19,18 @@
 #include <gtest/gtest.h>
 
 #include <unwindstack/Elf.h>
-#include <unwindstack/Regs.h>
-
-#include "Machine.h"
+#include <unwindstack/MachineArm.h>
+#include <unwindstack/MachineArm64.h>
+#include <unwindstack/MachineMips.h>
+#include <unwindstack/MachineMips64.h>
+#include <unwindstack/MachineX86.h>
+#include <unwindstack/MachineX86_64.h>
+#include <unwindstack/RegsArm.h>
+#include <unwindstack/RegsArm64.h>
+#include <unwindstack/RegsMips.h>
+#include <unwindstack/RegsMips64.h>
+#include <unwindstack/RegsX86.h>
+#include <unwindstack/RegsX86_64.h>
 
 #include "MemoryFake.h"
 
@@ -47,7 +56,6 @@ void RegsStepIfSignalHandlerTest::ArmStepIfSignalHandlerNonRt(uint32_t pc_data) 
   RegsArm regs;
   regs[ARM_REG_PC] = 0x5000;
   regs[ARM_REG_SP] = addr;
-  regs.SetFromRaw();
 
   elf_memory_->SetData32(0x5000, pc_data);
 
@@ -78,7 +86,6 @@ void RegsStepIfSignalHandlerTest::ArmStepIfSignalHandlerRt(uint32_t pc_data) {
   RegsArm regs;
   regs[ARM_REG_PC] = 0x5000;
   regs[ARM_REG_SP] = addr;
-  regs.SetFromRaw();
 
   elf_memory_->SetData32(0x5000, pc_data);
 
@@ -109,7 +116,6 @@ TEST_F(RegsStepIfSignalHandlerTest, arm64_step_if_signal_handler) {
   RegsArm64 regs;
   regs[ARM64_REG_PC] = 0x8000;
   regs[ARM64_REG_SP] = addr;
-  regs.SetFromRaw();
 
   elf_memory_->SetData64(0x8000, 0xd4000001d2801168ULL);
 
@@ -129,7 +135,6 @@ TEST_F(RegsStepIfSignalHandlerTest, x86_step_if_signal_handler_no_siginfo) {
   RegsX86 regs;
   regs[X86_REG_EIP] = 0x4100;
   regs[X86_REG_ESP] = addr;
-  regs.SetFromRaw();
 
   elf_memory_->SetData64(0x4100, 0x80cd00000077b858ULL);
   for (uint64_t index = 0; index <= 25; index++) {
@@ -153,7 +158,6 @@ TEST_F(RegsStepIfSignalHandlerTest, x86_step_if_signal_handler_siginfo) {
   RegsX86 regs;
   regs[X86_REG_EIP] = 0x4100;
   regs[X86_REG_ESP] = addr;
-  regs.SetFromRaw();
 
   elf_memory_->SetData64(0x4100, 0x0080cd000000adb8ULL);
   addr += 8;
@@ -182,7 +186,6 @@ TEST_F(RegsStepIfSignalHandlerTest, x86_64_step_if_signal_handler) {
   RegsX86_64 regs;
   regs[X86_64_REG_RIP] = 0x7000;
   regs[X86_64_REG_RSP] = addr;
-  regs.SetFromRaw();
 
   elf_memory_->SetData64(0x7000, 0x0f0000000fc0c748);
   elf_memory_->SetData16(0x7008, 0x0f05);
@@ -196,6 +199,63 @@ TEST_F(RegsStepIfSignalHandlerTest, x86_64_step_if_signal_handler) {
   EXPECT_EQ(0x150U, regs[X86_64_REG_RIP]);
   EXPECT_EQ(0x140U, regs.sp());
   EXPECT_EQ(0x150U, regs.pc());
+}
+
+TEST_F(RegsStepIfSignalHandlerTest, mips_step_if_signal_handler_non_rt) {
+  uint64_t addr = 0x1000;
+  RegsMips regs;
+  regs[MIPS_REG_PC] = 0x8000;
+  regs[MIPS_REG_SP] = addr;
+
+  elf_memory_->SetData64(0x8000, 0x0000000c24021017ULL);
+
+  for (uint64_t index = 0; index <= 50; index++) {
+    process_memory_.SetData64(addr + index * 8, index * 0x10);
+  }
+
+  ASSERT_TRUE(regs.StepIfSignalHandler(0x8000, elf_.get(), &process_memory_));
+  EXPECT_EQ(0x220U, regs[MIPS_REG_SP]);
+  EXPECT_EQ(0x040U, regs[MIPS_REG_PC]);
+  EXPECT_EQ(0x220U, regs.sp());
+  EXPECT_EQ(0x040U, regs.pc());
+}
+
+TEST_F(RegsStepIfSignalHandlerTest, mips_step_if_signal_handler_rt) {
+  uint64_t addr = 0x1000;
+  RegsMips regs;
+  regs[MIPS_REG_PC] = 0x8000;
+  regs[MIPS_REG_SP] = addr;
+
+  elf_memory_->SetData64(0x8000, 0x0000000c24021061ULL);
+
+  for (uint64_t index = 0; index <= 100; index++) {
+    process_memory_.SetData64(addr + index * 8, index * 0x10);
+  }
+
+  ASSERT_TRUE(regs.StepIfSignalHandler(0x8000, elf_.get(), &process_memory_));
+  EXPECT_EQ(0x350U, regs[MIPS_REG_SP]);
+  EXPECT_EQ(0x170U, regs[MIPS_REG_PC]);
+  EXPECT_EQ(0x350U, regs.sp());
+  EXPECT_EQ(0x170U, regs.pc());
+}
+
+TEST_F(RegsStepIfSignalHandlerTest, mips64_step_if_signal_handler) {
+  uint64_t addr = 0x1000;
+  RegsMips64 regs;
+  regs[MIPS64_REG_PC] = 0x8000;
+  regs[MIPS64_REG_SP] = addr;
+
+  elf_memory_->SetData64(0x8000, 0x0000000c2402145bULL);
+
+  for (uint64_t index = 0; index <= 100; index++) {
+    process_memory_.SetData64(addr + index * 8, index * 0x10);
+  }
+
+  ASSERT_TRUE(regs.StepIfSignalHandler(0x8000, elf_.get(), &process_memory_));
+  EXPECT_EQ(0x350U, regs[MIPS64_REG_SP]);
+  EXPECT_EQ(0x600U, regs[MIPS64_REG_PC]);
+  EXPECT_EQ(0x350U, regs.sp());
+  EXPECT_EQ(0x600U, regs.pc());
 }
 
 }  // namespace unwindstack

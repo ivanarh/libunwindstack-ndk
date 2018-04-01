@@ -20,7 +20,10 @@
 #include <stddef.h>
 
 #include <memory>
+#include <mutex>
 #include <string>
+#include <unordered_map>
+#include <utility>
 
 #include <unwindstack/ElfInterface.h>
 #include <unwindstack/Memory.h>
@@ -35,12 +38,22 @@ namespace unwindstack {
 struct MapInfo;
 class Regs;
 
+enum ArchEnum : uint8_t {
+  ARCH_UNKNOWN = 0,
+  ARCH_ARM,
+  ARCH_ARM64,
+  ARCH_X86,
+  ARCH_X86_64,
+  ARCH_MIPS,
+  ARCH_MIPS64,
+};
+
 class Elf {
  public:
   Elf(Memory* memory) : memory_(memory) {}
   virtual ~Elf() = default;
 
-  bool Init();
+  bool Init(bool init_gnu_debugdata);
 
   void InitGnuDebugdata();
 
@@ -48,19 +61,30 @@ class Elf {
 
   bool GetFunctionName(uint64_t addr, std::string* name, uint64_t* func_offset);
 
+  bool GetGlobalVariable(const std::string& name, uint64_t* memory_address);
+
   uint64_t GetRelPc(uint64_t pc, const MapInfo* map_info);
 
-  bool Step(uint64_t rel_pc, Regs* regs, Memory* process_memory);
+  bool Step(uint64_t rel_pc, uint64_t adjusted_rel_pc, uint64_t elf_offset, Regs* regs,
+            Memory* process_memory, bool* finished);
 
   ElfInterface* CreateInterfaceFromMemory(Memory* memory);
 
-  uint64_t GetLoadBias();
+  uint64_t GetLoadBias() { return load_bias_; }
+
+  bool IsValidPc(uint64_t pc);
+
+  void GetLastError(ErrorData* data);
+  ErrorCode GetLastErrorCode();
+  uint64_t GetLastErrorAddress();
 
   bool valid() { return valid_; }
 
   uint32_t machine_type() { return machine_type_; }
 
   uint8_t class_type() { return class_type_; }
+
+  ArchEnum arch() { return arch_; }
 
   Memory* memory() { return memory_.get(); }
 
@@ -70,15 +94,36 @@ class Elf {
 
   static bool IsValidElf(Memory* memory);
 
+  static void GetInfo(Memory* memory, bool* valid, uint64_t* size);
+
+  static uint64_t GetLoadBias(Memory* memory);
+
+  static void SetCachingEnabled(bool enable);
+  static bool CachingEnabled() { return cache_enabled_; }
+
+  static void CacheLock();
+  static void CacheUnlock();
+  static void CacheAdd(MapInfo* info);
+  static bool CacheGet(MapInfo* info);
+  static bool CacheAfterCreateMemory(MapInfo* info);
+
  protected:
   bool valid_ = false;
+  uint64_t load_bias_ = 0;
   std::unique_ptr<ElfInterface> interface_;
   std::unique_ptr<Memory> memory_;
   uint32_t machine_type_;
   uint8_t class_type_;
+  ArchEnum arch_;
+  // Protect calls that can modify internal state of the interface object.
+  std::mutex lock_;
 
   std::unique_ptr<Memory> gnu_debugdata_memory_;
   std::unique_ptr<ElfInterface> gnu_debugdata_interface_;
+
+  static bool cache_enabled_;
+  static std::unordered_map<std::string, std::pair<std::shared_ptr<Elf>, bool>>* cache_;
+  static std::mutex* cache_lock_;
 };
 
 }  // namespace unwindstack

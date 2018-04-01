@@ -27,7 +27,7 @@
 namespace unwindstack {
 
 bool DwarfMemory::ReadBytes(void* dst, size_t num_bytes) {
-  if (!memory_->Read(cur_offset_, dst, num_bytes)) {
+  if (!memory_->ReadFully(cur_offset_, dst, num_bytes)) {
     return false;
   }
   cur_offset_ += num_bytes;
@@ -235,7 +235,7 @@ bool DwarfMemory::ReadEncodedValue(uint8_t encoding, uint64_t* value) {
       return false;
   }
 
-  return AdjustEncodedValue(encoding & 0xf0, value);
+  return AdjustEncodedValue(encoding & 0x70, value);
 }
 
 // Instantiate all of the needed template functions.

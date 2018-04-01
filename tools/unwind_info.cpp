@@ -19,6 +19,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -52,8 +53,7 @@ void DumpArm(ElfInterfaceArm* interface) {
       printf("  PC 0x%" PRIx64, addr + load_bias);
       uint64_t func_offset;
       uint64_t pc = addr + load_bias;
-      // This might be a thumb function, so set the low bit.
-      if (interface->GetFunctionName(pc | 1, &name, &func_offset) && !name.empty()) {
+      if (interface->GetFunctionName(pc, load_bias, &name, &func_offset) && !name.empty()) {
         printf(" <%s>", name.c_str());
       }
       printf("\n");
@@ -86,14 +86,13 @@ void DumpDwarfSection(ElfInterface* interface, DwarfSection* section, uint64_t l
   for (const DwarfFde* fde : *section) {
     // Sometimes there are entries that have empty length, skip those since
     // they don't contain any interesting information.
-    if (fde->pc_start == fde->pc_end) {
+    if (fde == nullptr || fde->pc_start == fde->pc_end) {
       continue;
     }
     printf("\n  PC 0x%" PRIx64, fde->pc_start + load_bias);
     std::string name;
     uint64_t func_offset;
-    if (interface->GetFunctionName(fde->pc_start + load_bias, &name, &func_offset) &&
-        !name.empty()) {
+    if (interface->GetFunctionName(fde->pc_start, load_bias, &name, &func_offset) && !name.empty()) {
       printf(" <%s>", name.c_str());
     }
     printf("\n");
@@ -103,21 +102,26 @@ void DumpDwarfSection(ElfInterface* interface, DwarfSection* section, uint64_t l
   }
 }
 
-int GetElfInfo(const char* file) {
+int GetElfInfo(const char* file, uint64_t offset) {
   // Send all log messages to stdout.
   log_to_stdout(true);
 
   MemoryFileAtOffset* memory = new MemoryFileAtOffset;
-  if (!memory->Init(file, 0)) {
+  if (!memory->Init(file, offset)) {
     // Initializatation failed.
     printf("Failed to init\n");
     return 1;
   }
 
   Elf elf(memory);
-  if (!elf.Init() || !elf.valid()) {
+  if (!elf.Init(true) || !elf.valid()) {
     printf("%s is not a valid elf file.\n", file);
     return 1;
+  }
+
+  std::string soname;
+  if (elf.GetSoname(&soname)) {
+    printf("Soname: %s\n", soname.c_str());
   }
 
   ElfInterface* interface = elf.interface();
@@ -128,7 +132,7 @@ int GetElfInfo(const char* file) {
 
   if (interface->eh_frame() != nullptr) {
     printf("eh_frame information:\n");
-    DumpDwarfSection(interface, interface->eh_frame(), interface->load_bias());
+    DumpDwarfSection(interface, interface->eh_frame(), elf.GetLoadBias());
     printf("\n");
   } else {
     printf("\nno eh_frame information\n");
@@ -136,7 +140,7 @@ int GetElfInfo(const char* file) {
 
   if (interface->debug_frame() != nullptr) {
     printf("\ndebug_frame information:\n");
-    DumpDwarfSection(interface, interface->debug_frame(), interface->load_bias());
+    DumpDwarfSection(interface, interface->debug_frame(), elf.GetLoadBias());
     printf("\n");
   } else {
     printf("\nno debug_frame information\n");
@@ -165,8 +169,12 @@ int GetElfInfo(const char* file) {
 }  // namespace unwindstack
 
 int main(int argc, char** argv) {
-  if (argc != 2) {
-    printf("Need to pass the name of an elf file to the program.\n");
+  if (argc != 2 && argc != 3) {
+    printf("Usage: unwind_info ELF_FILE [OFFSET]\n");
+    printf("  ELF_FILE\n");
+    printf("    The path to an elf file.\n");
+    printf("  OFFSET\n");
+    printf("    Use the offset into the ELF file as the beginning of the elf.\n");
     return 1;
   }
 
@@ -180,5 +188,15 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  return unwindstack::GetElfInfo(argv[1]);
+  uint64_t offset = 0;
+  if (argc == 3) {
+    char* end;
+    offset = strtoull(argv[2], &end, 16);
+    if (*end != '\0') {
+      printf("Malformed OFFSET value: %s\n", argv[2]);
+      return 1;
+    }
+  }
+
+  return unwindstack::GetElfInfo(argv[1], offset);
 }

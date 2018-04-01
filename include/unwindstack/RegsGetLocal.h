@@ -33,7 +33,7 @@ namespace unwindstack {
 
 #if defined(__arm__)
 
-inline void RegsGetLocal(Regs* regs) {
+inline __always_inline void RegsGetLocal(Regs* regs) {
   void* reg_data = regs->RawData();
   asm volatile(
       ".align 2\n"
@@ -51,13 +51,11 @@ inline void RegsGetLocal(Regs* regs) {
       : [base] "+r"(reg_data)
       :
       : "memory");
-
-  regs->SetFromRaw();
 }
 
 #elif defined(__aarch64__)
 
-inline void RegsGetLocal(Regs* regs) {
+inline __always_inline void RegsGetLocal(Regs* regs) {
   void* reg_data = regs->RawData();
   asm volatile(
       "1:\n"
@@ -83,18 +81,14 @@ inline void RegsGetLocal(Regs* regs) {
       : [base] "+r"(reg_data)
       :
       : "x12", "x13", "memory");
-
-  regs->SetFromRaw();
 }
 
-#elif defined(__i386__) || defined(__x86_64__)
+#elif defined(__i386__) || defined(__x86_64__) || defined(__mips__)
 
 extern "C" void AsmGetRegs(void* regs);
 
 inline void RegsGetLocal(Regs* regs) {
   AsmGetRegs(regs->RawData());
-
-  regs->SetFromRaw();
 }
 
 #endif
