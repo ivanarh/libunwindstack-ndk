@@ -119,6 +119,9 @@ struct EvalInfo {
   AddressType cfa;
   bool return_address_undefined = false;
   RegsInfo<AddressType> regs_info;
+
+  EvalInfo(RegsImpl<AddressType>* regs) : regs_info(regs) {
+  }
 };
 
 template <typename AddressType>
@@ -198,10 +201,10 @@ bool DwarfSectionImpl<AddressType>::Eval(const DwarfCie* cie, Memory* regular_me
   // Always set the dex pc to zero when evaluating.
   cur_regs->set_dex_pc(0);
 
-  EvalInfo<AddressType> eval_info{.loc_regs = &loc_regs,
-                                  .cie = cie,
-                                  .regular_memory = regular_memory,
-                                  .regs_info = RegsInfo<AddressType>(cur_regs)};
+  EvalInfo<AddressType> eval_info{cur_regs};
+  eval_info.loc_regs = &loc_regs;
+  eval_info.cie = cie;
+  eval_info.regular_memory = regular_memory;
   const DwarfLocation* loc = &cfa_entry->second;
   // Only a few location types are valid for the cfa.
   switch (loc->type) {

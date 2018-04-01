@@ -25,6 +25,13 @@ file(GLOB UNWINDSTACK_SOURCES
     ${UNWINDSTACK_ROOT}/ElfInterfaceArm.cpp
     ${UNWINDSTACK_ROOT}/android-base/stringprintf.cpp
     ${UNWINDSTACK_ROOT}/getline.c
+    ${UNWINDSTACK_ROOT}/RegsArm.cpp
+    ${UNWINDSTACK_ROOT}/RegsArm64.cpp
+    ${UNWINDSTACK_ROOT}/RegsMips.cpp
+    ${UNWINDSTACK_ROOT}/RegsMips64.cpp
+    ${UNWINDSTACK_ROOT}/RegsX86.cpp
+    ${UNWINDSTACK_ROOT}/RegsX86_64.cpp
+    ${UNWINDSTACK_ROOT}/DwarfEhFrameWithHdr.cpp
 )
 
 if(${CMAKE_SYSTEM_PROCESSOR} MATCHES arm)

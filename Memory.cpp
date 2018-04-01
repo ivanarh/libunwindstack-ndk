@@ -83,7 +83,7 @@ static size_t ProcessVmRead(pid_t pid, uint64_t remote_src, void* dst, size_t le
       ++iovecs_used;
     }
 
-    ssize_t rc = process_vm_readv(pid, &dst_iov, 1, src_iovs, iovecs_used, 0);
+    ssize_t rc = syscall(__NR_process_vm_readv, pid, &dst_iov, 1, src_iovs, iovecs_used, 0);
     if (rc == -1) {
       return total_read;
     }
@@ -292,7 +292,13 @@ size_t MemoryRemote::Read(uint64_t addr, void* dst, size_t size) {
 }
 
 size_t MemoryLocal::Read(uint64_t addr, void* dst, size_t size) {
-  return ProcessVmRead(getpid(), addr, dst, size);
+  // Prefer process_vm_read, try it first. If it doesn't work, use direct memory read.
+  size_t result = ProcessVmRead(getpid(), addr, dst, size);
+  if (!result && size) {
+    memcpy(dst, (void *)addr, size);
+    result = size;
+  }
+  return result;
 }
 
 MemoryRange::MemoryRange(const std::shared_ptr<Memory>& memory, uint64_t begin, uint64_t length,
@@ -335,7 +341,7 @@ bool MemoryOffline::Init(const std::string& file, uint64_t offset) {
     return false;
   }
 
-  memory_ = std::make_unique<MemoryRange>(memory_file, sizeof(start), size, start);
+  memory_.reset(new MemoryRange(memory_file, sizeof(start), size, start));
   return true;
 }
 
