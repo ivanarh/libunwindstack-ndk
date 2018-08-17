@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include <sys/ptrace.h>
 #define PTRACE_GETREGSET 0x4204
+#define PTRACE_GETREGS 12
 #include <sys/uio.h>
 
 #include <vector>
@@ -53,24 +54,28 @@ Regs* Regs::RemoteGet(pid_t pid) {
   io.iov_len = buffer.size() * sizeof(uint64_t);
 
   if (ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, reinterpret_cast<void*>(&io)) == -1) {
+    // Falling back to PTRACE_GETREGS.
+    if (ptrace(PTRACE_GETREGS, pid, 0, io.iov_base) == -1) {
+      return nullptr;
+    }
+  }
+  // Assuming we can't unwind an architecture other than current.
+  switch (Regs::CurrentArch()) {
+  case ARCH_X86:
+    return RegsX86::Read(buffer.data());
+  case ARCH_X86_64:
+    return RegsX86_64::Read(buffer.data());
+  case ARCH_ARM:
+    return RegsArm::Read(buffer.data());
+  case ARCH_ARM64:
+    return RegsArm64::Read(buffer.data());
+  case ARCH_MIPS:
+    return RegsMips::Read(buffer.data());
+  case ARCH_MIPS64:
+    return RegsMips64::Read(buffer.data());
+  default:
     return nullptr;
   }
-
-  switch (io.iov_len) {
-  case sizeof(x86_user_regs):
-    return RegsX86::Read(buffer.data());
-  case sizeof(x86_64_user_regs):
-    return RegsX86_64::Read(buffer.data());
-  case sizeof(arm_user_regs):
-    return RegsArm::Read(buffer.data());
-  case sizeof(arm64_user_regs):
-    return RegsArm64::Read(buffer.data());
-  case sizeof(mips_user_regs):
-    return RegsMips::Read(buffer.data());
-  case sizeof(mips64_user_regs):
-    return RegsMips64::Read(buffer.data());
-  }
-  return nullptr;
 }
 
 Regs* Regs::CreateFromUcontext(ArchEnum arch, void* ucontext) {
