@@ -17,8 +17,10 @@
 #include <linux/elf.h>
 #include <stdint.h>
 #include <sys/ptrace.h>
+#ifdef ANDROID
 #define PTRACE_GETREGSET 0x4204
 #define PTRACE_GETREGS 12
+#endif
 #include <sys/uio.h>
 
 #include <vector>
@@ -55,7 +57,7 @@ Regs* Regs::RemoteGet(pid_t pid) {
 
   if (ptrace(PTRACE_GETREGSET, pid, NT_PRSTATUS, reinterpret_cast<void*>(&io)) == -1) {
     // Falling back to PTRACE_GETREGS.
-    if (ptrace(PTRACE_GETREGS, pid, 0, io.iov_base) == -1) {
+    if (ptrace(PTRACE_GETREGS, pid, nullptr, io.iov_base) == -1) {
       return nullptr;
     }
   }

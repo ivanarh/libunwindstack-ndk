@@ -15,7 +15,7 @@
  */
 
 #include <stdint.h>
-
+#include <string.h>
 #include <functional>
 
 #include <unwindstack/Elf.h>

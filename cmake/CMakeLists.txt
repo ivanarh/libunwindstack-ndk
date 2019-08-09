@@ -34,6 +34,14 @@ file(GLOB UNWINDSTACK_SOURCES
     ${UNWINDSTACK_ROOT}/DwarfEhFrameWithHdr.cpp
 )
 
+message(STATUS "Using ${CMAKE_SYSTEM_PROCESSOR} architecture")
+
+if (CMAKE_SYSTEM_PROCESSOR MATCHES x86_64)
+    list(APPEND UNWINDSTACK_SOURCES ${UNWINDSTACK_ROOT}/AsmGetRegsX86_64.S)
+elseif (CMAKE_SYSTEM_PROCESSOR MATCHES x86|i686)
+    list(APPEND UNWINDSTACK_SOURCES ${UNWINDSTACK_ROOT}/AsmGetRegsX86.S)
+endif()
+
 if(${CMAKE_SYSTEM_PROCESSOR} MATCHES arm)
 else()
     add_definitions(-DEM_ARM=40)
@@ -41,3 +49,6 @@ endif()
 
 add_library(unwindstack STATIC ${UNWINDSTACK_SOURCES})
 target_link_libraries(unwindstack lzma)
+
+install(TARGETS unwindstack DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
