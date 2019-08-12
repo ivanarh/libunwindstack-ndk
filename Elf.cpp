@@ -278,7 +278,7 @@ ElfInterface* Elf::CreateInterfaceFromMemory(Memory* memory) {
       arch_ = ARCH_MIPS64;
     } else {
       // Unsupported.
-      ALOGI("64 bit elf that is neither aarch64 nor x86_64 nor mips64: e_machine = %d\n",
+      log(0, "64 bit elf that is neither aarch64 nor x86_64 nor mips64: e_machine = %d\n",
             e_machine);
       return nullptr;
     }
