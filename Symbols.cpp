@@ -20,7 +20,7 @@
 #include <string>
 
 #include <unwindstack/Memory.h>
-
+#include <algorithm>
 #include "Check.h"
 #include "Symbols.h"
 

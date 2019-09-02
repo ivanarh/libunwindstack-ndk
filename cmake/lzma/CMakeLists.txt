@@ -42,3 +42,6 @@ file(GLOB LZMA_SOURCES
     ${LZMA_ROOT}/C/XzIn.c
 )
 add_library(lzma STATIC ${LZMA_SOURCES})
+
+install(TARGETS lzma DESTINATION ${CMAKE_INSTALL_LIBDIR})
+

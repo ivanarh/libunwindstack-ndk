@@ -21,7 +21,18 @@
 #include <string>
 
 #define LOG_TAG "unwind"
+
+#if defined(ANDROID)
 #include <android-base/log_main.h>
+#else
+#   include <cstdio>
+#   define LOG_PRI_VA(priority, tag, fmt, args...) { \
+        fprintf(stderr, tag); \
+        fprintf(stderr, fmt, args); \
+        fprintf(stderr, "\n"); \
+    }
+#endif
+
 
 #include <android-base/stringprintf.h>
 

@@ -22,6 +22,7 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
+#include <string.h>
 #include "unistdfix.h"
 #include <sys/syscall.h>
 
@@ -83,7 +84,12 @@ static size_t ProcessVmRead(pid_t pid, uint64_t remote_src, void* dst, size_t le
       ++iovecs_used;
     }
 
+#if ANDROID
     ssize_t rc = syscall(__NR_process_vm_readv, pid, &dst_iov, 1, src_iovs, iovecs_used, 0);
+#else
+    // !!! do not use syscall on linux (we get undefined behavior, call stack is not correct and valgrind complains)
+    ssize_t rc = process_vm_readv(pid, &dst_iov, 1, src_iovs, iovecs_used, 0);
+#endif
     if (rc == -1) {
       return total_read;
     }

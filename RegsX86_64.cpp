@@ -15,7 +15,7 @@
  */
 
 #include <stdint.h>
-
+#include <string.h>
 #include <functional>
 
 #include <unwindstack/Elf.h>
@@ -139,7 +139,7 @@ Regs* RegsX86_64::CreateFromUcontext(void* ucontext) {
 }
 
 bool RegsX86_64::StepIfSignalHandler(uint64_t rel_pc, Elf* elf, Memory* process_memory) {
-  uint64_t data;
+  uint64_t data = 0;
   Memory* elf_memory = elf->memory();
   // Read from elf memory since it is usually more expensive to read from
   // process memory.

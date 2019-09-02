@@ -2,6 +2,7 @@
 #define GETLINE_H_
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #ifdef __cplusplus
 extern "C" {
